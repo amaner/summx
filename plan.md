@@ -178,13 +178,13 @@ The high-level strategy:
 
 ### External Repo (outside `summx/`)
 
-* [ ] Fork Emi’s Arxiv-MCP repo into your GitHub.
-* [ ] Clone your fork locally.
+* [x] Fork Emi’s Arxiv-MCP repo into your GitHub.
+* [x] Clone your fork locally.
 
 ### Tasks in the fork
 
-* [ ] Set up local environment following Emi’s instructions (preferably with `uv`).
-* [ ] Identify the `search_papers` implementation and:
+* [x] Set up local environment following Emi’s instructions (preferably with `uv`).
+* [x] Identify the `search_papers` implementation and:
 
   * Change **default category** from `cs.SE` to:
 
@@ -198,11 +198,11 @@ The high-level strategy:
 
 ### Integration tasks in SummX
 
-* [ ] Decide on `MCP_ARXIV_COMMAND` / `MCP_ARXIV_ARGS`, e.g.:
+* [x] Decide on `MCP_ARXIV_COMMAND` / `MCP_ARXIV_ARGS`, e.g.:
 
   * `MCP_ARXIV_COMMAND="uv"`
   * `MCP_ARXIV_ARGS="tool run arxiv-mcp --storage-path ~/.summx/papers"`
-* [ ] Add these fields to `SummXConfig`.
+* [x] Add these fields to `SummXConfig`.
 
 **Exit criteria**
 
@@ -225,7 +225,7 @@ The high-level strategy:
 
 **Tasks**
 
-* [ ] Implement `McpSession`:
+* [x] Implement `McpSession`:
 
   * Uses `SummXConfig` to spawn the forked Arxiv-MCP server.
   * Provides `call_tool(name: str, arguments: dict) -> dict`.
@@ -237,7 +237,7 @@ For now, **mock** `call_tool` in unit tests; full integration comes later.
 
 **Tasks**
 
-* [ ] Implement `ArxivMcpClient` methods:
+* [x] Implement `ArxivMcpClient` methods:
 
   * `search_papers(topic, author, sort, limit, category=None) -> list[PaperMeta]`
 
@@ -245,15 +245,15 @@ For now, **mock** `call_tool` in unit tests; full integration comes later.
     * Map Emi’s response format → `PaperMeta`.
   * `download_paper(arxiv_id) -> str | None`
   * `read_paper(arxiv_id) -> PaperContentSections`
-* [ ] Ensure `search_papers` always passes a `category` argument:
+* [x] Ensure `search_papers` always passes a `category` argument:
 
   * At minimum, allow `None` to mean “no category filter.”
   * Later, use planner to pick categories based on topic.
 
 ### 5.3 Tests
 
-* [ ] Use mocked `McpSession.call_tool` to simulate Emi’s tool outputs.
-* [ ] Unit-test mapping of JSON → `PaperMeta` / `PaperContentSections`.
+* [x] Use mocked `McpSession.call_tool` to simulate Emi’s tool outputs.
+* [x] Unit-test mapping of JSON → `PaperMeta` / `PaperContentSections`.
 
 **Exit criteria**
 
@@ -275,7 +275,7 @@ For now, **mock** `call_tool` in unit tests; full integration comes later.
 
 #### 6.1 PlanExecutor
 
-* [ ] Implement `PlanExecutor`:
+* [x] Implement `PlanExecutor`:
 
   * Holds `ArxivMcpClient` and summarizer `LLMClient`.
   * `async execute(plan: SearchPlan) -> list[PaperResult]`:
@@ -292,17 +292,17 @@ For now, **mock** `call_tool` in unit tests; full integration comes later.
 
 #### 6.2 PaperAgent
 
-* [ ] Implement `PaperAgent`:
+* [x] Implement `PaperAgent`:
 
   * Holds `QueryPlanner` + `PlanExecutor`.
   * `async run(raw_query: str) -> tuple[SearchPlan, list[PaperResult]]`.
 
 ### Tests
 
-* [ ] Mock `ArxivMcpClient` and summarizer `LLMClient`:
+* [x] Mock `ArxivMcpClient` and summarizer `LLMClient`:
 
   * Confirm `execute()` correctly assembles `PaperResult` objects.
-* [ ] Integration-style test:
+* [x] Integration-style test:
 
   * `PaperAgent.run()` with dummy planner/executor wiring.
 
