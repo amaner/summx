@@ -25,14 +25,14 @@ The high-level strategy:
 
 ### Tasks
 
-- [ ] Create basic repo structure:
+- [x] Create basic repo structure:
   - `pyproject.toml`
   - `README.md`
   - `plan.md`
   - `src/summx/` plus subpackages:
     - `models/`, `llm/`, `mcp/`, `agent/`, `cli/`, `ui/`
-- [ ] Add minimal `__init__.py` files so everything imports.
-- [ ] Set up environment (conda or venv) and install dependencies:
+- [x] Add minimal `__init__.py` files so everything imports.
+- [x] Set up environment (conda or venv) and install dependencies:
   ```bash
   pip install -e .
   pip install -e ".[dev]"
@@ -59,18 +59,18 @@ The high-level strategy:
 
 **Tasks**
 
-* [ ] Implement paper-related models:
+* [x] Implement paper-related models:
 
   * `PaperMeta`
   * `PaperContentSections`
   * `PaperSummary`
   * `PaperResult`
-* [ ] Implement planning models:
+* [x] Implement planning models:
 
   * `SummarizationConfig`
   * `SearchFilters`
   * `SearchPlan`
-* [ ] Add unit tests:
+* [x] Add unit tests:
 
   * `tests/test_models.py` — construct and validate these dataclasses.
 
@@ -87,7 +87,7 @@ The high-level strategy:
 
 **Tasks**
 
-* [ ] Implement `SummXConfig` or simple helpers to:
+* [x] Implement `SummXConfig` or simple helpers to:
 
   * Load env vars:
 
@@ -99,7 +99,7 @@ The high-level strategy:
 
     * Planner provider/model
     * Summarizer provider/model
-* [ ] Implement `load_config()` returning a config object.
+* [x] Implement `load_config()` returning a config object.
 
 **Exit criteria**
 
@@ -121,17 +121,17 @@ The high-level strategy:
 
 ### Tasks
 
-* [ ] Define `LLMClient` abstract base with:
+* [x] Define `LLMClient` abstract base with:
 
   * `async def chat(self, messages: list[dict[str, str]]) -> str`
-* [ ] Implement `OpenAIClient`:
+* [x] Implement `OpenAIClient`:
 
   * Wrap OpenAI chat completions.
-* [ ] Implement `GroqClient`:
+* [x] Implement `GroqClient`:
 
   * Wrap Groq chat completions.
-* [ ] Implement `get_llm(provider, api_key, model)` factory.
-* [ ] Implement a `DummyLLMClient` (for tests) that returns canned responses.
+* [x] Implement `get_llm(provider, api_key, model)` factory.
+* [x] Implement a `DummyLLMClient` (for tests) that returns canned responses.
 
 **Exit criteria**
 
