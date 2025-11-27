@@ -151,14 +151,14 @@ The high-level strategy:
 
 ### Tasks
 
-* [ ] Implement `QUERY_PLANNER_SYSTEM` and any helper templates in `prompts.py`:
+* [x] Implement `QUERY_PLANNER_SYSTEM` and any helper templates in `prompts.py`:
 
   * Ensure the planner emits **JSON-only** responses.
-* [ ] Implement `QueryPlanner`:
+* [x] Implement `QueryPlanner`:
 
   * Holds a planner `LLMClient`.
   * `async plan(raw_query: str) -> SearchPlan`.
-* [ ] Use `DummyLLMClient` for tests:
+* [x] Use `DummyLLMClient` for tests:
 
   * Provide a fixed JSON response.
   * Confirm correct parsing into `SearchPlan`.
