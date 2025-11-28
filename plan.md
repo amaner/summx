@@ -1,12 +1,4 @@
 
-Below is a **fully rewritten `plan.md`** that:
-
-* Treats MCP as **optional / future work**
-* Makes the **direct arXiv API backend** the primary integration
-* Keeps your architecture modular so MCP can be plugged back in later without rewrites
-* Reflects where you *actually* are now (CLI issues, need for stability)
-
-You can drop this straight into your repo as `plan.md`.
 
 ---
 
@@ -356,15 +348,3 @@ UI ✅
 
 ---
 
-## Strategic Outcome
-
-This plan ensures:
-
-✅ You get a working SummX CLI *now*
-✅ UI builds on stable foundations
-✅ MCP doesn’t block core development
-✅ You retain future extensibility
-
----
-
-If you want, next I can help you rewrite your README’s architecture section to reflect this new “API-first with MCP optional” design.
