@@ -1,13 +1,10 @@
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Literal
 
-from dotenv import load_dotenv
-from pydantic import Field, ConfigDict
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
-# Load .env file from the project root or parent directories
-load_dotenv()
 
 
 class SummXConfig(BaseSettings):
@@ -16,28 +13,24 @@ class SummXConfig(BaseSettings):
     """
 
     # --- API Keys ---
-    openai_api_key: Optional[str] = Field(None, alias="OPENAI_API_KEY")
-    groq_api_key: Optional[str] = Field(None, alias="GROQ_API_KEY")
+    openai_api_key: Optional[str] = None
+    groq_api_key: Optional[str] = None
 
-    # --- MCP Server Configuration ---
-    mcp_arxiv_command: str = Field(
-        "uv tool run arxiv-mcp-server", alias="MCP_ARXIV_COMMAND"
-    )
-    mcp_arxiv_storage_path: Path = Field(
-        Path.home() / ".summx" / "papers", alias="MCP_ARXIV_STORAGE_PATH"
-    )
+    # --- Paper Source Configuration ---
+    paper_source: Literal["api", "mcp"] = "api"
+    # The following are for the optional MCP backend
+    mcp_arxiv_command: Optional[str] = None
+    mcp_arxiv_storage_path: Optional[Path] = None
 
     # --- Default LLM Models ---
-    planner_provider: str = Field("openai", alias="PLANNER_PROVIDER")
-    planner_model: str = Field("gpt-4o-mini", alias="PLANNER_MODEL")
-    summarizer_provider: str = Field("groq", alias="SUMMARIZER_PROVIDER")
-    summarizer_model: str = Field(
-        "llama3-8b-8192", alias="SUMMARIZER_MODEL"
-    )
+    planner_provider: str = "openai"
+    planner_model: str = "gpt-4o-mini"
+    summarizer_provider: str = "groq"
+    summarizer_model: str = "llama3-8b-8192"
 
     model_config = ConfigDict(
         case_sensitive=False,
-        env_file=None,  # Explicitly disable .env file loading for tests
+        env_file=".env",
         extra="ignore",
     )
 

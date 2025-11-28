@@ -4,7 +4,7 @@ import logging
 from typing import List, Tuple
 
 from summx.llm import LLMClient
-from summx.mcp import ArxivMcpClient
+from summx.sources.base import PaperSourceClient
 from summx.models import (
     PaperContentSections,
     PaperResult,
@@ -19,16 +19,16 @@ logger = logging.getLogger(__name__)
 class PlanExecutor:
     """Executes a SearchPlan to fetch and summarize papers."""
 
-    def __init__(self, mcp_client: ArxivMcpClient, summarizer_llm: LLMClient):
-        self.mcp_client = mcp_client
+    def __init__(self, source_client: PaperSourceClient, summarizer_llm: LLMClient):
+        self.source_client = source_client
         self.summarizer_llm = summarizer_llm
 
     async def execute(self, plan: SearchPlan) -> List[PaperResult]:
         """Executes the given search plan and returns a list of paper results."""
         logger.info(f"Executing plan: {plan.model_dump_json(indent=2)}")
 
-        # 1. Fetch paper metadata from MCP client
-        paper_metas = await self.mcp_client.get_papers_for_plan(plan)
+        # 1. Fetch paper metadata from the source client
+        paper_metas = await self.source_client.search_papers(plan)
 
         results: List[PaperResult] = []
         if not plan.summarization.enabled:
@@ -45,12 +45,10 @@ class PlanExecutor:
     async def _process_paper(self, meta) -> PaperResult:
         """Helper to process a single paper: download, read, and summarize."""
         try:
-            # In a real implementation, we would download and read the paper.
-            # The current `read_paper` is a placeholder, so we simulate content.
-            # This part will be expanded in Phase 9 (Real Integration).
-            content = PaperContentSections(full_text=meta.abstract or "")
+            # Read the full paper content
+            content = await self.source_client.read_paper(meta.arxiv_id)
 
-            # For now, we'll just summarize the abstract.
+            # Summarize the content
             summary = await self._summarize_content(content)
 
             return PaperResult(meta=meta, content=content, summary=summary)
@@ -61,26 +59,41 @@ class PlanExecutor:
 
     async def _summarize_content(self, content: PaperContentSections) -> PaperSummary:
         """Summarizes the given content using the summarizer LLM."""
-        # This is a placeholder for the real summarization prompt and logic.
-        # A real implementation would use a prompt from `prompts.py`.
+        # In a real application, this prompt would be more sophisticated and live in `prompts.py`.
+        system_prompt = (
+            "You are a research assistant. Your task is to summarize a paper's abstract."
+            "Analyze the text and provide a summary in the following JSON format:\n"
+            "{\n"
+            '    "tldr": ["A one-sentence summary."],\n'
+            '    "problem": "What problem is the paper trying to solve?",\n'
+            '    "method": "What method does the paper propose?",\n'
+            '    "results": "What are the key results?",\n'
+            '    "limitations": "What are the limitations of the work?",\n'
+            '    "future_work": "What are the suggestions for future work?",\n'
+            '    "raw_markdown": "A markdown-formatted summary."\n'
+            "}\n"
+        )
+
         messages = [
-            {
-                "role": "system",
-                "content": "You are a helpful research assistant. Summarize the following abstract.",
-            },
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": content.full_text},
         ]
+
         response_text = await self.summarizer_llm.chat(messages)
-        # A real implementation would parse this into the structured PaperSummary.
-        return PaperSummary(
-            tldr=["TLDR placeholder"],
-            problem="Problem placeholder",
-            method="Method placeholder",
-            results="Results placeholder",
-            limitations="Limitations placeholder",
-            future_work="Future work placeholder",
-            raw_markdown=response_text,
-        )
+        try:
+            summary_json = json.loads(response_text)
+            return PaperSummary.model_validate(summary_json)
+        except (json.JSONDecodeError, TypeError) as e:
+            # If the LLM fails to produce valid JSON, we fall back to a raw summary.
+            return PaperSummary(
+                tldr=["LLM failed to produce a valid JSON summary."],
+                problem="N/A",
+                method="N/A",
+                results="N/A",
+                limitations="N/A",
+                future_work="N/A",
+                raw_markdown=response_text,
+            )
 
 
 class PaperAgent:

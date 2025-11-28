@@ -16,8 +16,9 @@ def test_load_config_defaults():
         assert config.planner_model == "gpt-4o-mini"
         assert config.summarizer_provider == "groq"
         assert config.summarizer_model == "llama3-8b-8192"
-        assert config.mcp_arxiv_command == "uv tool run arxiv-mcp-server"
-        assert config.mcp_arxiv_storage_path == Path.home() / ".summx" / "papers"
+        assert config.paper_source == "api"
+        assert config.mcp_arxiv_command is None
+        assert config.mcp_arxiv_storage_path is None
 
 
 def test_load_config_with_env_vars():
@@ -26,14 +27,16 @@ def test_load_config_with_env_vars():
         "OPENAI_API_KEY": "test_openai_key",
         "GROQ_API_KEY": "test_groq_key",
         "PLANNER_MODEL": "gpt-4-turbo",
-        "MCP_ARXIV_STORAGE_PATH": "/tmp/summx_test",
+        "PAPER_SOURCE": "mcp",
+        "MCP_ARXIV_COMMAND": "test command",
     }
     with patch.dict(os.environ, mock_env, clear=True):
         config = load_config()
         assert config.openai_api_key == "test_openai_key"
         assert config.groq_api_key == "test_groq_key"
         assert config.planner_model == "gpt-4-turbo"
-        assert config.mcp_arxiv_storage_path == Path("/tmp/summx_test")
+        assert config.paper_source == "mcp"
+        assert config.mcp_arxiv_command == "test command"
 
 
 def test_load_config_is_singleton():

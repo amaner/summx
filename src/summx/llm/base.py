@@ -28,36 +28,24 @@ class DummyLLMClient(LLMClient):
 def get_llm(
     provider: Provider,
     config: SummXConfig,
-    model: Optional[str] = None,
+    model_name: Optional[str] = None,
 ) -> LLMClient:
-    """
-    Factory function to get an LLM client based on the provider and config.
-
-    Args:
-        provider: The name of the LLM provider.
-        config: The application configuration object.
-        model: Optional model name to override the default from config.
-
-    Returns:
-        An instance of an LLMClient.
-    """
-    # Local imports to avoid circular dependencies
-    from .groq_client import GroqClient
-    from .openai_client import OpenAIClient
-
+    """Factory function to get an LLM client based on the provider."""
     if provider == "openai":
-        api_key = config.openai_api_key
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY is not set.")
-        return OpenAIClient(api_key=api_key, model=model or config.planner_model)
-
-    if provider == "groq":
-        api_key = config.groq_api_key
-        if not api_key:
-            raise ValueError("GROQ_API_KEY is not set.")
-        return GroqClient(api_key=api_key, model=model or config.summarizer_model)
-
-    if provider == "dummy":
+        from .openai_client import OpenAIClient
+        if not config.openai_api_key:
+            raise ValueError("OPENAI_API_KEY is not set in the configuration.")
+        return OpenAIClient(
+            api_key=config.openai_api_key, model=model_name or config.planner_model
+        )
+    elif provider == "groq":
+        from .groq_client import GroqClient
+        if not config.groq_api_key:
+            raise ValueError("GROQ_API_KEY is not set in the configuration.")
+        return GroqClient(
+            api_key=config.groq_api_key, model=model_name or config.summarizer_model
+        )
+    elif provider == "dummy":
         return DummyLLMClient()
-
-    raise ValueError(f"Unknown LLM provider: {provider}")
+    else:
+        raise ValueError(f"Unsupported LLM provider: {provider}")

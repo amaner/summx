@@ -1,3 +1,4 @@
+import os
 import pytest
 from unittest.mock import patch
 
@@ -42,13 +43,13 @@ def test_get_llm_factory_groq():
 def test_get_llm_factory_override_model():
     """Tests that the model can be overridden in the factory."""
     config = load_config()
-    client = get_llm(provider="openai", config=config, model="test-model-override")
+    client = get_llm(provider="openai", config=config, model_name="test-model-override")
     assert isinstance(client, OpenAIClient)
     assert client.model == "test-model-override"
 
 def test_get_llm_factory_missing_key():
     """Tests that the factory raises a ValueError if an API key is missing."""
-    with patch.dict("os.environ", {}, clear=True):
+    with patch.dict(os.environ, {}, clear=True):
         config = load_config()
         with pytest.raises(ValueError, match="OPENAI_API_KEY is not set."):
             get_llm(provider="openai", config=config)
@@ -59,5 +60,5 @@ def test_get_llm_factory_missing_key():
 def test_get_llm_factory_unknown_provider():
     """Tests that the factory raises a ValueError for an unknown provider."""
     config = load_config()
-    with pytest.raises(ValueError, match="Unknown LLM provider: fake_provider"):
+    with pytest.raises(ValueError, match="Unsupported LLM provider: fake_provider"):
         get_llm(provider="fake_provider", config=config) # type: ignore

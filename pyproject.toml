@@ -32,6 +32,12 @@ dependencies = [
 
   # Async / utilities
   "rich>=13.6.0",
+
+  # MCP Server dependencies
+  "PyMuPDF>=1.24.1",
+
+  # arXiv API Client
+  "arxiv>=2.1.0",
 ]
 
 [project.optional-dependencies]
@@ -56,3 +62,4 @@ select = ["E", "F", "W", "I", "B"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+norecursedirs = ["tests/test_cli.py"]

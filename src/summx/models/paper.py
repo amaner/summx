@@ -1,8 +1,9 @@
+from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+
 
 class PaperMeta(BaseModel):
-    """Metadata for a single paper as returned by the MCP layer."""
+    """Represents metadata for a single paper."""
     arxiv_id: str
     title: str
     authors: List[str]
@@ -12,8 +13,9 @@ class PaperMeta(BaseModel):
     pdf_url: Optional[str] = None
     local_pdf_path: Optional[str] = None
 
+
 class PaperContentSections(BaseModel):
-    """Extracted textual content of a paper, split into semantic sections."""
+    """Represents the extracted textual content of a paper."""
     full_text: str
     abstract: Optional[str] = None
     introduction: Optional[str] = None
@@ -22,8 +24,9 @@ class PaperContentSections(BaseModel):
     conclusion: Optional[str] = None
     other_sections: Dict[str, str] = Field(default_factory=dict)
 
+
 class PaperSummary(BaseModel):
-    """LLM-produced summary of a paper."""
+    """Represents the LLM-produced summary of a paper."""
     tldr: List[str] = Field(default_factory=list)
     problem: str
     method: str
@@ -31,6 +34,7 @@ class PaperSummary(BaseModel):
     limitations: str
     future_work: str
     raw_markdown: str
+
 
 class PaperResult(BaseModel):
     """Convenience wrapper combining everything for a single paper result."""
