@@ -17,7 +17,7 @@ It uses a multi-step, agentic pipeline to convert natural language queries into 
 -   **Agentic Pipeline**: A `QueryPlanner` converts your request into a structured `SearchPlan`, which a `PlanExecutor` then executes.
 -   **Pluggable Backends**:
     -   **LLM Providers**: Supports multiple LLM backends (OpenAI, Groq) for planning and summarization.
-    -   **Paper Sources**: A `PaperSourceClient` interface allows for multiple paper backends. The primary backend is a direct client for the arXiv API. An experimental MCP-based client is also included.
+    -   **Paper Sources**: A `PaperSourceClient` interface allows for multiple paper backends. The primary backend is a direct client for the arXiv API. An MCP-based client is planned for future development but is not currently implemented.
 -   **CLI & Web UI**: Interact with SummX through a command-line interface or a Streamlit-based web UI.
 -   **Local-First**: Designed for local execution and caching of results.
 
@@ -50,14 +50,16 @@ classDiagram
     }
 
     class ArxivApiClient
-    class ArxivMcpClient
+    class ArxivMcpClient {
+        <<deferred>>
+    }
 
     UserInterface --> PaperAgent
     PaperAgent --> QueryPlanner
     PaperAgent --> PlanExecutor
     PlanExecutor --> PaperSourceClient
     PaperSourceClient <|-- ArxivApiClient
-    PaperSourceClient <|-- ArxivMcpClient
+    PaperSourceClient <|.. ArxivMcpClient
 ```
 
 This architecture ensures that the core functionality does not depend on the availability of any single external service (like an MCP server) and can be easily extended to support new paper sources in the future.
