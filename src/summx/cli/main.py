@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import subprocess
 from pathlib import Path
 from typing import List
 
@@ -12,7 +13,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from summx.agent import PaperAgent, PlanExecutor, QueryPlanner
 from summx.config import load_config
 from summx.llm import get_llm
-from summx.sources.arxiv_api_client import ArxivApiClient
+from summx.sources import get_source_client
 from summx.models import PaperResult, SearchPlan
 
 # --- Manual .env loading (Workaround) ---
@@ -56,16 +57,16 @@ def _print_results(plan: SearchPlan, results: List[PaperResult]):
         meta_text = f"Published: {meta.published} | ArXiv ID: {meta.arxiv_id}"
 
         summary_panel = ""
-        if result.summary:
-            summary_text = result.summary.raw_markdown
-            summary_panel = Panel(summary_text, title="Summary", border_style="blue", expand=True)
-
         console.print(Panel(
-            f"[bold cyan]{title_text}[/bold cyan]\n{author_text}\n{meta_text}\n\n{summary_panel}",
+            f"[bold cyan]{title_text}[/bold cyan]\n{author_text}\n{meta_text}",
             title=f"Result {i+1}",
             border_style="magenta",
             expand=True
         ))
+        if result.summary:
+            summary_text = result.summary.raw_markdown
+            summary_panel = Panel(summary_text, title="Summary", border_style="blue", expand=True)
+            console.print(summary_panel)
 
 
 async def _run_agent(query: str):
@@ -84,7 +85,7 @@ async def _run_agent(query: str):
             planner_llm = get_llm(provider=config.planner_provider, config=config)
             summarizer_llm = get_llm(provider=config.summarizer_provider, config=config)
 
-            source_client = ArxivApiClient()
+            source_client = get_source_client(config=config)
 
             planner = QueryPlanner(llm=planner_llm)
             executor = PlanExecutor(
@@ -113,8 +114,30 @@ def run_query(query: str = typer.Argument(..., help="The natural language query 
     """
     asyncio.run(_run_agent(query))
 
+
+@app.command()
+def ui():
+    """Launches the Streamlit web UI."""
+    # Get the path to the UI's main script
+    ui_path = Path(__file__).parent.parent / "ui" / "main.py"
+    if not ui_path.exists():
+        console.print(f"[bold red]Error:[/] UI script not found at {ui_path}")
+        raise typer.Exit(1)
+
+    # Use subprocess to run streamlit, ensuring it's run in the context
+    # of the current Python environment.
+    try:
+        subprocess.run(["streamlit", "run", str(ui_path)], check=True)
+    except FileNotFoundError:
+        console.print("[bold red]Error:[/] `streamlit` command not found. Is it installed in your environment?")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[bold red]Failed to launch Streamlit UI:[/] {e}")
+        raise typer.Exit(1)
+
 def main():
     app()
+
 
 if __name__ == "__main__":
     main()

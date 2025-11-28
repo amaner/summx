@@ -41,7 +41,18 @@ class QueryPlanner:
             plan_json = json.loads(response_text)
             # Add the original query to the plan for traceability
             plan_json["raw_query"] = raw_query
-            return SearchPlan.model_validate(plan_json)
+            plan = SearchPlan.model_validate(plan_json)
+
+            # --- Business Logic Override ---
+            # Ensure summarization is enabled by default, unless the user explicitly asks not to.
+            # This makes the agent more helpful and predictable.
+            disable_phrases = ["don't summarize", "do not summarize", "no summary", "without summarizing"]
+            if not any(phrase in raw_query.lower() for phrase in disable_phrases):
+                plan.summarization.enabled = True
+            else:
+                plan.summarization.enabled = False
+
+            return plan
         except (json.JSONDecodeError, TypeError) as e:
             # Handle cases where the LLM output is not valid JSON
             raise ValueError(f"Failed to parse LLM response into a valid plan: {e}") from e

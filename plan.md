@@ -1,116 +1,109 @@
 
-# SummX Development Plan
+Below is a **fully rewritten `plan.md`** that:
 
-This document outlines a **dependency-aware** development plan for SummX.
+* Treats MCP as **optional / future work**
+* Makes the **direct arXiv API backend** the primary integration
+* Keeps your architecture modular so MCP can be plugged back in later without rewrites
+* Reflects where you *actually* are now (CLI issues, need for stability)
 
-We now assume:
+You can drop this straight into your repo as `plan.md`.
 
-- SummX uses a **forked local copy** of **Emi’s Arxiv-MCP server** as its arXiv backend.
-- The MCP layer (`McpSession`, `ArxivMcpClient`) talks to this server via MCP.
-- We will **generalize** Emi’s SE-focused defaults (e.g., `cs.SE`) where needed.
+---
 
-The high-level strategy:
+# SummX Development Plan (Revised)
 
-1. Build **stable foundations** (models, config, LLM abstraction).
-2. Implement and test the **agent pipeline** with mocks.
-3. Integrate **MCP + Emi’s server fork**.
-4. Layer on **CLI** and **UI**.
-5. Harden with tests, real integration, and documentation.
+This plan reflects a strategic pivot away from **MCP as a hard dependency** and toward a **direct arXiv API–based backend** first, with MCP remaining an optional
+advanced integration later.
+
+Key philosophy:
+
+> Get the core pipeline (planner → agent → executor → CLI/UI) fully stable before
+> depending on under-documented external components.
+
+---
+
+## High-Level Architecture (Updated)
+
+Instead of hard-coding MCP, SummX now uses a pluggable **Paper Source Interface**:
+
+```text
+QueryPlanner → SearchPlan → PaperAgent → PlanExecutor → PaperSourceClient → arXiv
+│
+├── ArxivApiClient ✅ (Primary)
+└── McpArxivClient   (Optional / later)
+```
+
+This ensures:
+- Your CLI/UI work regardless of MCP availability.
+- MCP can be reintroduced later without breaking your agent pipeline.
 
 ---
 
 ## Phase 0 — Repo Skeleton & Environment
 
-**Goal:** Have a clean, runnable Python package skeleton with no real logic yet.
+**Goal:** Clean Python package with working imports & test harness.
 
 ### Tasks
-
-- [x] Create basic repo structure:
-  - `pyproject.toml`
+- [x] Define project structure under `src/summx/`
+- [x] Create:
   - `README.md`
   - `plan.md`
-  - `src/summx/` plus subpackages:
-    - `models/`, `llm/`, `mcp/`, `agent/`, `cli/`, `ui/`
-- [x] Add minimal `__init__.py` files so everything imports.
-- [x] Set up environment (conda or venv) and install dependencies:
+  - `pyproject.toml`
+- [x] Setup environment (`conda` or `venv` + pip).
+- [x] Ensure:
   ```bash
-  pip install -e .
-  pip install -e ".[dev]"
+  python -c "import summx"
+  pytest
   ```
 
-**Exit criteria**
+**Exit Criteria**
 
-* `python -c "import summx"` succeeds.
-* `pytest` runs (even if there are no tests yet).
+* Package imports cleanly.
+* Tests run (even if empty).
 
 ---
 
 ## Phase 1 — Domain Models & Config
 
-**Goal:** Define core data structures and configuration that everything else depends on.
+**Goal:** Define stable domain objects for papers, plans, and results.
 
-### 1.1 Models
-
-**Files**
+### Files
 
 * `src/summx/models/paper.py`
 * `src/summx/models/plan.py`
 * `src/summx/models/__init__.py`
+* `src/summx/config.py`
 
-**Tasks**
+### Tasks
 
-* [x] Implement paper-related models:
+* [ ] Implement paper models:
 
   * `PaperMeta`
   * `PaperContentSections`
   * `PaperSummary`
   * `PaperResult`
-* [x] Implement planning models:
+* [ ] Implement planning models:
 
-  * `SummarizationConfig`
   * `SearchFilters`
+  * `SummarizationConfig`
   * `SearchPlan`
-* [x] Add unit tests:
+* [x] Implement `SummXConfig`:
 
-  * `tests/test_models.py` — construct and validate these dataclasses.
+  * LLM options
+  * Default source client type
+  * API keys
+  * Optional MCP config
 
-**Exit criteria**
+### Exit Criteria
 
-* `from summx.models import PaperMeta, SearchPlan` works.
-* Basic model tests pass.
-
-### 1.2 Config
-
-**File**
-
-* `src/summx/config.py`
-
-**Tasks**
-
-* [x] Implement `SummXConfig` or simple helpers to:
-
-  * Load env vars:
-
-    * API keys (OpenAI, Groq, etc.)
-    * MCP command (`MCP_ARXIV_COMMAND`)
-    * MCP args (`MCP_ARXIV_ARGS`)
-    * MCP storage path (`MCP_ARXIV_STORAGE_PATH`)
-  * Define default models:
-
-    * Planner provider/model
-    * Summarizer provider/model
-* [x] Implement `load_config()` returning a config object.
-
-**Exit criteria**
-
-* `from summx.config import load_config` works.
-* Config can be created without hitting external services.
+* Models can be imported and instantiated.
+* Unit tests validate dataclass behavior.
 
 ---
 
 ## Phase 2 — LLM Abstraction Layer
 
-**Goal:** Have a unified way to talk to LLM providers (OpenAI, Groq) that the agent can use.
+**Goal:** Unified LLM interface for OpenAI, Groq, etc.
 
 ### Files
 
@@ -121,28 +114,25 @@ The high-level strategy:
 
 ### Tasks
 
-* [x] Define `LLMClient` abstract base with:
+* [x] Define `LLMClient` base class.
+* [x] Implement:
 
-  * `async def chat(self, messages: list[dict[str, str]]) -> str`
-* [x] Implement `OpenAIClient`:
+  * `OpenAIClient`
+  * `GroqClient`
+  * `DummyLLMClient` (for tests)
+* [x] Implement `get_llm()` factory.
+* [x] Test with mock prompts.
 
-  * Wrap OpenAI chat completions.
-* [x] Implement `GroqClient`:
+### Exit Criteria
 
-  * Wrap Groq chat completions.
-* [x] Implement `get_llm(provider, api_key, model)` factory.
-* [x] Implement a `DummyLLMClient` (for tests) that returns canned responses.
-
-**Exit criteria**
-
-* A simple test can create a `DummyLLMClient` and call `.chat()` successfully.
-* LLM factory tests pass.
+* You can call `.chat(...)` on any provider.
+* Unit tests use `DummyLLMClient`.
 
 ---
 
-## Phase 3 — Prompts & Planner (Agent Part 1)
+## Phase 3 — Planner Layer
 
-**Goal:** Convert natural-language queries into structured `SearchPlan` objects.
+**Goal:** Convert natural language into structured plans.
 
 ### Files
 
@@ -151,333 +141,230 @@ The high-level strategy:
 
 ### Tasks
 
-* [x] Implement `QUERY_PLANNER_SYSTEM` and any helper templates in `prompts.py`:
+* [x] Define planner prompt for emitting strict JSON.
+* [x] Implement `QueryPlanner.plan(raw_query) → SearchPlan`.
+* [x] Write tests using `DummyLLMClient`.
 
-  * Ensure the planner emits **JSON-only** responses.
-* [x] Implement `QueryPlanner`:
+### Exit Criteria
 
-  * Holds a planner `LLMClient`.
-  * `async plan(raw_query: str) -> SearchPlan`.
-* [x] Use `DummyLLMClient` for tests:
+* Planner converts input like:
 
-  * Provide a fixed JSON response.
-  * Confirm correct parsing into `SearchPlan`.
-
-**Exit criteria**
-
-* `QueryPlanner.plan()` returns a valid `SearchPlan` for a mocked LLM.
-* Planner module tests pass.
+  > “Show most recent hypergraph papers”
+  > into a valid `SearchPlan`.
 
 ---
 
-## Phase 4 — Fork & Configure Emi’s Arxiv-MCP Server
+## Phase 4 — Paper Source Abstraction
 
-**Goal:** Prepare a local, forked MCP server instance that SummX can talk to.
-
-> This phase is new/specific to the Emi choice.
-
-### External Repo (outside `summx/`)
-
-* [x] Fork Emi’s Arxiv-MCP repo into your GitHub.
-* [x] Clone your fork locally.
-
-### Tasks in the fork
-
-* [x] Set up local environment following Emi’s instructions (preferably with `uv`).
-* [x] Identify the `search_papers` implementation and:
-
-  * Change **default category** from `cs.SE` to:
-
-    * Something more general (e.g. `None`, or a configurable default).
-* [ ] Optionally neutralize SE-specific phrasing in tool descriptions.
-* [ ] Add a minimal config file or env var support if needed for:
-
-  * default categories,
-  * rate limiting,
-  * storage path.
-
-### Integration tasks in SummX
-
-* [x] Decide on `MCP_ARXIV_COMMAND` / `MCP_ARXIV_ARGS`, e.g.:
-
-  * `MCP_ARXIV_COMMAND="uv"`
-  * `MCP_ARXIV_ARGS="tool run arxiv-mcp --storage-path ~/.summx/papers"`
-* [x] Add these fields to `SummXConfig`.
-
-**Exit criteria**
-
-* You can start the forked Arxiv-MCP server locally from the command line.
-* It responds correctly to `search_papers` for **non-SE categories** when invoked directly (e.g. via a test client or CLI).
-
----
-
-## Phase 5 — MCP Session & Arxiv Client
-
-**Goal:** Wrap Emi’s MCP server with a stable Python interface.
+**Goal:** Remove MCP dependency from core logic.
 
 ### Files
 
-* `src/summx/mcp/session.py`
-* `src/summx/mcp/arxiv_client.py`
-* `src/summx/mcp/__init__.py`
+* `src/summx/sources/base.py`
+* `src/summx/sources/arxiv_api_client.py`
 
-### 5.1 MCP Session
+### Tasks
 
-**Tasks**
+#### 4.1 Source Interface
 
-* [x] Implement `McpSession`:
+Implement generic paper source base class:
 
-  * Uses `SummXConfig` to spawn the forked Arxiv-MCP server.
-  * Provides `call_tool(name: str, arguments: dict) -> dict`.
-  * Handles process lifecycle (`start()`, `stop()`, or context manager).
+```python
+class PaperSourceClient:
+    async def search_papers(self, plan: SearchPlan) -> list[PaperMeta]:
+        ...
+    async def read_paper(self, arxiv_id: str) -> PaperContentSections:
+        ...
+    async def get_pdf_url(self, arxiv_id: str) -> str:
+        ...
+```
 
-For now, **mock** `call_tool` in unit tests; full integration comes later.
+#### 4.2 Primary Backend — arXiv API
 
-### 5.2 Arxiv Client
+Implement `ArxivApiClient` using the `arxiv` Python package:
 
-**Tasks**
+* [x] Implement `search_papers`
+* [x] Implement `read_paper` (metadata + abstract first)
+* [x] Generate PDF URLs
+* [x] Unit test mapping into SummX models
 
-* [x] Implement `ArxivMcpClient` methods:
+### Exit Criteria
 
-  * `search_papers(topic, author, sort, limit, category=None) -> list[PaperMeta]`
-
-    * Build tool payload and call `session.call_tool("search_papers", {...})`.
-    * Map Emi’s response format → `PaperMeta`.
-  * `download_paper(arxiv_id) -> str | None`
-  * `read_paper(arxiv_id) -> PaperContentSections`
-* [x] Ensure `search_papers` always passes a `category` argument:
-
-  * At minimum, allow `None` to mean “no category filter.”
-  * Later, use planner to pick categories based on topic.
-
-### 5.3 Tests
-
-* [x] Use mocked `McpSession.call_tool` to simulate Emi’s tool outputs.
-* [x] Unit-test mapping of JSON → `PaperMeta` / `PaperContentSections`.
-
-**Exit criteria**
-
-* `ArxivMcpClient.search_papers()` and `read_paper()` work with mocked MCP responses.
-* No direct dependency on Emi’s actual server in unit tests (that’s for integration tests later).
+* Can search arXiv directly without MCP.
+* Returns valid `PaperMeta` and `PaperContentSections`.
 
 ---
 
-## Phase 6 — Executor & PaperAgent (Agent Part 2)
+## Phase 5 — Executor + PaperAgent
 
-**Goal:** Execute `SearchPlan` using ArxivMcpClient + summarizer LLM to produce `PaperResult` list.
+**Goal:** End-to-end agent logic with no CLI yet.
 
 ### Files
 
 * `src/summx/agent/executor.py`
-* `src/summx/agent/__init__.py`
+* `src/summx/agent/agent.py`
 
 ### Tasks
 
-#### 6.1 PlanExecutor
+* [x] Implement `PlanExecutor` using `PaperSourceClient`.
+* [x] Implement `PaperAgent` using:
 
-* [x] Implement `PlanExecutor`:
+  * `QueryPlanner`
+  * `PlanExecutor`
+* [x] Unit test agent pipeline using:
 
-  * Holds `ArxivMcpClient` and summarizer `LLMClient`.
-  * `async execute(plan: SearchPlan) -> list[PaperResult]`:
+  * `ArxivApiClient`
+  * `DummyLLMClient`
 
-    * Calls `search_papers()` using `plan.filters`, `plan.sort`, `plan.limit`.
-    * For each paper:
+### Exit Criteria
 
-      * If `plan.summarization.enabled`:
+* Calling:
 
-        * Call `read_paper(arxiv_id)` → `PaperContentSections`.
-        * Build summarization prompt (from `prompts.py`).
-        * Call summarizer LLM → `PaperSummary`.
-      * Build `PaperResult`.
+  ```python
+  plan, results = await agent.run("Recent hypergraph papers")
+  ```
 
-#### 6.2 PaperAgent
-
-* [x] Implement `PaperAgent`:
-
-  * Holds `QueryPlanner` + `PlanExecutor`.
-  * `async run(raw_query: str) -> tuple[SearchPlan, list[PaperResult]]`.
-
-### Tests
-
-* [x] Mock `ArxivMcpClient` and summarizer `LLMClient`:
-
-  * Confirm `execute()` correctly assembles `PaperResult` objects.
-* [x] Integration-style test:
-
-  * `PaperAgent.run()` with dummy planner/executor wiring.
-
-**Exit criteria**
-
-* Agent pipeline works end-to-end in tests using mocks only.
+  returns structured, summarized results.
 
 ---
 
-## Phase 7 — CLI
+## Phase 6 — CLI Interface
 
-**Goal:** Provide a practical `summx` CLI that wraps `PaperAgent`.
+**Goal:** Fully functional terminal interface.
 
 ### Files
 
 * `src/summx/cli/main.py`
-* `src/summx/cli/__init__.py`
-* `tests/test_cli.py`
 
 ### Tasks
 
-* [ ] Implement Typer app (`app = typer.Typer()`).
-* [ ] Implement `summx query`:
+* [x] Implement `summx query "..."`
+* [x] Wire to:
 
-  * Accepts a natural-language query.
-  * Loads config.
-  * Constructs:
+  * `QueryPlanner`
+  * `PaperAgent`
+  * `ArxivApiClient`
+* [x] Format output:
 
-    * planner LLM
-    * summarizer LLM
-    * `McpSession` + `ArxivMcpClient`
-    * `QueryPlanner`, `PlanExecutor`, `PaperAgent`
-  * Calls `await PaperAgent.run(query)`.
-  * Prints plan + results (titles, authors, PDF links, maybe short TL;DR).
-* [ ] Implement `summx ui`:
+  * Titles
+  * Authors
+  * PDF links
+  * Summaries
+* [x] Add `summx ui` launcher.
 
-  * Launches Streamlit app, e.g.:
+### Exit Criteria
 
-    ```bash
-    streamlit run summx/ui/streamlit_app.py
-    ```
+* You can run:
 
-### Tests
+  ```bash
+  summx query "5 most recent hypergraph papers"
+  ```
 
-* [ ] Use Typer’s `CliRunner` with a mocked `PaperAgent`:
-
-  * Ensure commands parse arguments and call agent correctly.
-
-**Exit criteria**
-
-* `summx --help` shows both `query` and `ui` commands.
-* `summx query "..."` runs with mocked components in tests.
+without MCP and get real results.
 
 ---
 
-## Phase 8 — Streamlit UI
+## Phase 7 — Streamlit UI
 
-**Goal:** Build a simple web UI for non-CLI users.
+**Goal:** GUI interface for exploration.
 
 ### Files
 
 * `src/summx/ui/streamlit_app.py`
-* `src/summx/ui/__init__.py`
 
 ### Tasks
 
-* [ ] Set up basic Streamlit layout:
+* [x] Query input
+* [x] Model/provider selection
+* [x] Display cards for each paper
+* [x] PDF download links
+* [x] Summary rendered via markdown
 
-  * Page title, wide layout.
-* [ ] Sidebar:
+### Exit Criteria
 
-  * Planner provider/model selection.
-  * Summarizer provider/model selection.
-  * Summarization depth.
-  * Limit (# of papers).
-* [ ] Main area:
-
-  * Query text input.
-  * “Run agent” button.
-  * Display interpreted `SearchPlan`.
-  * Display a card per `PaperResult`:
-
-    * Title, authors, date, categories.
-    * Download link (arXiv PDF URL or local cached PDF).
-    * Markdown summary.
-
-**Exit criteria**
-
-* `summx ui` opens the SummX UI in a browser.
-* Running a query shows at least mocked/dummy results (initially).
+* `summx ui` launches web UI.
+* Queries display paper lists + summaries.
 
 ---
 
-## Phase 9 — Real Integration with Emi’s MCP Server
+## Phase 8 — Optional: MCP Reintegration (Deferred)
 
-**Goal:** Wire SummX to the real forked Arxiv-MCP server and test end-to-end.
+**Goal:** Add MCP as an optional backend, not a dependency.
+
+### Files
+
+* `src/summx/mcp/session.py`
+* `src/summx/mcp/arxiv_mcp_client.py`
 
 ### Tasks
 
-* [ ] Confirm `McpSession` can start/stop the forked server using `MCP_ARXIV_COMMAND`/`ARGS`.
+* [ ] Implement `McpArxivClient(PaperSourceClient)`
+* [ ] Translate MCP tool responses → SummX models.
+* [ ] Add config flag:
 
-* [ ] Add integration tests (optional, may be marked/slow) that:
+  ```bash
+  SUMMX_SOURCE=mcp
+  ```
+* [ ] Only use MCP if explicitly enabled.
 
-  * Spin up a real `McpSession` (or run against an already running server).
-  * Call `ArxivMcpClient.search_papers()` with real categories (e.g. `math.CO`).
-  * Confirm results map into `PaperMeta`.
+### Exit Criteria
 
-* [ ] Manually test:
+* SummX works in two modes:
 
-  * CLI queries:
-
-    * `summx query "five most recent papers on hyper graphs"`
-    * `summx query "most recent publication by <author>"`
-  * UI queries with the same.
-
-* [ ] Ensure category handling works:
-
-  * No hidden `cs.SE` bias survives from Emi’s defaults.
-  * Planner → Plan → ArxivMcpClient flow supports arbitrary categories.
-
-**Exit criteria**
-
-* SummX can fetch real arXiv papers via Emi’s server.
-* Summaries are generated end-to-end for real queries.
+  * `SUMMX_SOURCE=api` ✅
+  * `SUMMX_SOURCE=mcp` (experimental)
 
 ---
 
-## Phase 10 — Polishing, Docs, and DX
+## Phase 9 — Polish & Documentation
 
-**Goal:** Make SummX usable and understandable for other researchers.
+**Goal:** Make it usable by other researchers.
 
 ### Tasks
 
-* [ ] Update `README.md`:
+* [x] Update README to reflect:
 
-  * Installation (conda/venv, how to install your Emi fork).
-  * MCP backend explanation.
-  * Usage: CLI + UI.
-  * Architecture overview (link to UML sections).
-* [ ] Document category behavior clearly:
-
-  * How SummX avoids being SE-only.
-  * How to tweak category handling in config or planner.
-* [ ] Add docstrings to public classes/methods.
-* [ ] (Optional) Add `docs/` or mkdocs site.
-* [ ] Add Jupyter notebook examples:
-
-  * Programmatic usage:
-
-    ```python
-    from summx.agent import PaperAgent
-    ```
-
-**Exit criteria**
-
-* A new researcher can:
-
-  * Clone SummX and your Arxiv-MCP fork.
-  * Follow README instructions.
-  * Run `summx query` and `summx ui` on their own machine.
-  * Understand enough architecture to extend or debug.
+  * API-first design
+  * Optional MCP backend
+* [x] Add quick-start guide.
+* [x] Add example queries.
+* [x] Add warning that MCP backend is experimental.
 
 ---
 
-## Short Summary of Implementation Order
+## Final Execution Order
 
-1. **Models + Config**
-2. **LLM abstraction + DummyLLM**
-3. **Prompts + QueryPlanner**
-4. **Fork Emi’s Arxiv-MCP + adjust defaults**
-5. **McpSession + ArxivMcpClient (mocked tests)**
-6. **PlanExecutor + PaperAgent (mocked tests)**
-7. **CLI (`summx query`, `summx ui`)**
-8. **Streamlit UI**
-9. **Real integration with forked Emi MCP server**
-10. **Polish, docs, and ergonomics**
+```
+Models & Config
+   ↓
+LLM Layer
+   ↓
+Planner
+   ↓
+Paper Source Interface
+   ↓
+ArxivApiClient ✅
+   ↓
+Executor + Agent
+   ↓
+CLI ✅
+   ↓
+UI ✅
+   ↓
+(MCP optional)
+```
 
-This ordering reflects the fact that we now **depend on a customizable MCP backend** (Emi’s server) but still want to keep SummX loosely coupled and testable with mocks independently of that backend.
+---
+
+## Strategic Outcome
+
+This plan ensures:
+
+✅ You get a working SummX CLI *now*
+✅ UI builds on stable foundations
+✅ MCP doesn’t block core development
+✅ You retain future extensibility
+
+---
+
+If you want, next I can help you rewrite your README’s architecture section to reflect this new “API-first with MCP optional” design.

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 from typing import List, Tuple
 
 from summx.llm import LLMClient
@@ -81,7 +82,14 @@ class PlanExecutor:
 
         response_text = await self.summarizer_llm.chat(messages)
         try:
-            summary_json = json.loads(response_text)
+            # Use regex to find the JSON block, even with markdown fences
+            match = re.search(r"```json\n({.*?})\n```|({.*?})", response_text, re.DOTALL)
+            if not match:
+                raise json.JSONDecodeError("No JSON object found in response", response_text, 0)
+            
+            # Extract the first non-empty group
+            json_str = next(g for g in match.groups() if g)
+            summary_json = json.loads(json_str)
             return PaperSummary.model_validate(summary_json)
         except (json.JSONDecodeError, TypeError) as e:
             # If the LLM fails to produce valid JSON, we fall back to a raw summary.

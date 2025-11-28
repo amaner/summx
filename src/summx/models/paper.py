@@ -26,7 +26,7 @@ class PaperContentSections(BaseModel):
 
 
 class PaperSummary(BaseModel):
-    """Represents the LLM-produced summary of a paper."""
+    """Represents the structured summary of a paper."""
     tldr: List[str] = Field(default_factory=list)
     problem: str
     method: str
@@ -34,6 +34,24 @@ class PaperSummary(BaseModel):
     limitations: str
     future_work: str
     raw_markdown: str
+
+    def to_markdown(self) -> str:
+        """Converts the structured summary into a pretty markdown string."""
+        if self.problem == "N/A":  # Fallback for when parsing failed
+            return self.raw_markdown
+
+        sections = {
+            "Problem": self.problem,
+            "Method": self.method,
+            "Results": self.results,
+            "Limitations": self.limitations,
+            "Future Work": self.future_work,
+        }
+
+        tldr_section = "- " + "\n- ".join(self.tldr) if self.tldr else ""
+        other_sections = "\n".join(f"**{title}:** {content}" for title, content in sections.items())
+
+        return f"**TL;DR:**\n{tldr_section}\n\n---\n\n{other_sections}"
 
 
 class PaperResult(BaseModel):

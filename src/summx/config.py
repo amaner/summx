@@ -26,7 +26,7 @@ class SummXConfig(BaseSettings):
     planner_provider: str = "openai"
     planner_model: str = "gpt-4o-mini"
     summarizer_provider: str = "groq"
-    summarizer_model: str = "llama3-8b-8192"
+    summarizer_model: str = "llama-3.1-8b-instant"
 
     model_config = ConfigDict(
         case_sensitive=False,
