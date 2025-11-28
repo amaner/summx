@@ -46,6 +46,7 @@ classDiagram
     class PaperSourceClient {
         <<Interface>>
         +search_papers(plan)
+        +read_paper(arxiv_id)
     }
 
     class ArxivApiClient
