@@ -5,6 +5,8 @@ js:
 
 # SummX
 
+> By Andrew Maner, Ph.D. | November 2025
+
 **SummX** is a local, agent-based AI tool designed to search, retrieve, and summarize academic papers from online sources like arXiv.
 
 It uses a multi-step, agentic pipeline to convert natural language queries into structured, summarized research findings.
