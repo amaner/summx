@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.13"
 
 authors = [
-  { name = "Andrew Maner", email = "andrew.maner@bizztech.com" }
+  { name = "Andrew Maner", email = "" }
 ]
 
 license = { text = "MIT" }
